@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rompecabezas</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background: #f9f9f9;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+    canvas {
+      border: 2px solid #333;
+      touch-action: none;
+      max-width: 95vw;
+      height: auto;
+    }
+    #message {
+      display: none;
+      margin-top: 20px;
+      font-size: 1.5rem;
+      color: #e91e63;
+      text-align: center;
+      animation: fadeIn 1s ease-in-out forwards;
+      z-index: 10;
+    }
+    .heart {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      background: red;
+      transform: rotate(45deg);
+      animation: float 3s ease-out forwards;
+      opacity: 0.8;
+    }
+    .heart::before,
+    .heart::after {
+      content: "";
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      background: red;
+      border-radius: 50%;
+    }
+    .heart::before {
+      top: -10px;
+      left: 0;
+    }
+    .heart::after {
+      left: -10px;
+      top: 0;
+    }
+    @keyframes float {
+      0% {
+        transform: translateY(0) scale(1) rotate(45deg);
+        opacity: 1;
+      }
+      100% {
+        transform: translateY(-150px) scale(1.5) rotate(45deg);
+        opacity: 0;
+      }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="puzzle"></canvas>
+  <div id="message">Feliz día a la mejor novia 💕</div>
+
+  <script>
+    const imgSrc = 'foto-rompecabezas.jpg';
+    const rows = 5;
+    const cols = 5;
+
+    const canvas = document.getElementById('puzzle');
+    const ctx = canvas.getContext('2d');
+
+    let pieces = [];
+    let pieceWidth, pieceHeight;
+    let selected = null;
+    let completed = false;
+
+    const img = new Image();
+    img.src = imgSrc;
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
+
+      pieceWidth = img.width / cols;
+      pieceHeight = img.height / rows;
+
+      let originalPieces = [];
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          originalPieces.push({
+            sx: x * pieceWidth,
+            sy: y * pieceHeight
+          });
+        }
+      }
+
+      const shuffledPositions = [...originalPieces];
+      shuffle(shuffledPositions);
+
+      for (let i = 0; i < originalPieces.length; i++) {
+        pieces.push({
+          sx: originalPieces[i].sx,
+          sy: originalPieces[i].sy,
+          dx: shuffledPositions[i].sx,
+          dy: shuffledPositions[i].sy
+        });
+      }
+
+      draw();
+    };
+
+    function shuffle(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (const piece of pieces) {
+        ctx.drawImage(img, piece.sx, piece.sy, pieceWidth, pieceHeight,
+                           piece.dx, piece.dy, pieceWidth, pieceHeight);
+      }
+    }
+
+    function getPieceAt(x, y) {
+      for (let i = 0; i < pieces.length; i++) {
+        const p = pieces[i];
+        if (x >= p.dx && x < p.dx + pieceWidth &&
+            y >= p.dy && y < p.dy + pieceHeight) {
+          return i;
+        }
+      }
+      return null;
+    }
+
+    canvas.addEventListener('pointerdown', e => {
+      const rect = canvas.getBoundingClientRect();
+      const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+      selected = getPieceAt(x, y);
+    });
+
+    canvas.addEventListener('pointerup', e => {
+      if (selected === null) return;
+
+      const rect = canvas.getBoundingClientRect();
+      const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+      const target = getPieceAt(x, y);
+
+      if (target !== null && target !== selected) {
+        [pieces[selected].dx, pieces[target].dx] = [pieces[target].dx, pieces[selected].dx];
+        [pieces[selected].dy, pieces[target].dy] = [pieces[target].dy, pieces[selected].dy];
+      }
+
+      selected = null;
+      draw();
+      checkWin();
+    });
+
+    function checkWin() {
+      if (completed) return;
+      const complete = pieces.every(p => p.sx === p.dx && p.sy === p.dy);
+      if (complete) {
+        completed = true;
+        document.getElementById('message').style.display = 'block';
+        throwHearts();
+      }
+    }
+
+    function throwHearts() {
+      for (let i = 0; i < 30; i++) {
+        setTimeout(() => {
+          const heart = document.createElement('div');
+          heart.className = 'heart';
+          heart.style.left = Math.random() * 100 + 'vw';
+          heart.style.bottom = '0px';
+          document.body.appendChild(heart);
+          setTimeout(() => heart.remove(), 3000);
+        }, i * 150);
+      }
+    }
+  </script>
+</body>
+</html>
+
